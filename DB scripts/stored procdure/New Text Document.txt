@@ -1,0 +1,45 @@
+-----1. Retrieve Courses by Category
+SELECT c.title, c.price,  
+       COALESCE(AVG(CAST(r.rateAmount AS FLOAT)), 0) AS average_rating  
+FROM course c  
+LEFT JOIN Rate r ON c.Id = r.courseId  
+WHERE c.Tag = 'Python' 
+GROUP BY c.Id, c.title, c.price;
+
+------------2. Search Courses by Keyword
+DECLARE @keyword VARCHAR(50) = 'Python';  
+
+SELECT * FROM course  
+WHERE title LIKE '%' + @keyword + '%'  
+   OR description LIKE '%' + @keyword + '%';
+
+
+
+
+   ------3. Track Learner Progress
+
+   DECLARE @learnerId INT = 2;
+DECLARE @courseId INT = 1; 
+
+SELECT 
+    r.courseId,
+    COUNT(v.lessonId) AS completed_lessons,
+    (SELECT COUNT(*) FROM recordedLessons WHERE courseId = @courseId) - COUNT(v.lessonId) AS remaining_lessons
+FROM recordedLessons r  
+LEFT JOIN videos v ON r.Id = v.lessonId  
+WHERE r.courseId = @courseId  
+GROUP BY r.courseId;
+
+
+
+---------4. Top-Rated Courses
+
+SELECT c.title,  
+       COALESCE(AVG(CAST(r.rateAmount AS FLOAT)), 0) AS average_rating,  
+       COUNT(pc.personid) AS total_enrollments  
+FROM course c  
+LEFT JOIN Rate r ON c.Id = r.courseId  
+LEFT JOIN personCourse pc ON c.Id = pc.courseId  
+GROUP BY c.Id, c.title  
+ORDER BY average_rating DESC, total_enrollments DESC;
+

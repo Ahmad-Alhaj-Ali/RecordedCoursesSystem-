@@ -1,0 +1,65 @@
+1- Define Scope  (Recorded Courses System)
+
+2- Mandatory Object (learner - Instructor - courses - Admin - User)
+
+3- Software Type (Customize) - (Requirement Techniques)
+
+4- Summarizing System Objects (Abstract action)
+   
+(id, createby, updateby, isActive, updatedate, creationdate)
+
+   A- Admin (fullname , email , password)
+   B- learner (fullname , email , password , bio ,image ,category)
+   C- Instructor(fullname , email , password , bio ,image ,category)
+   E- Users (fullname , email , password , bio, image, nationality, phone)
+   F- course (id, title , description, category, Level , price, discount, duration, coverImage, language)
+   G- recorded lessons(id, title , courseid )
+   H- videos(videofile, lessonsid )
+      I- Rate (Message , rateAmount )
+
+5- Generalization and Specialization (Restructuring)
+
+  --> Admin , Instructor , learner , Users ----> Person 
+ 
+
+6- Define Relationships 
+
+  1)Inheritance 
+         we have 3 approaches
+   A - Combine every thing in one table (Person)
+   B - Create child and add the shared element in each child induvial
+   C - Create Parent and Child and build relationship between them   
+    
+  2)Composition 
+
+    Person ( M-M )course  
+    Person (M-M) Rate
+    course (1-M)recorded lessons
+    recorded lessons (1-M)videos
+    Rate  (weak entity)
+
+  3)Association
+
+
+============================ Result 1 ==============================
+System Object and Relationships 
+===================================================================
+7- Implement ER Diagram 
+
+    Person ( M-M )course   (M-M) Rate
+    course (1-M)recorded lessons (1-1)videos
+    Rate  (weak entity)
+
+8- Implement Data base (Tables and constraints)
+
+   A- Denormalization (Actors , Object)
+   B- Normalization (Actors , Object , Lookups (nationality, category, language))
+
+   1- id , Name 
+
+9- Fill Testing Data at least 5 row in each table 
+
+10- Implement The Required Schema Object (SP / Functions / View / Trigger / Job )
+
+
+11- Test the required business case / requirement  

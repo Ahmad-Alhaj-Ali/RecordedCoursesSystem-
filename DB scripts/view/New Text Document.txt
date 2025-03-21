@@ -1,0 +1,154 @@
+-------view
+--------1. Active Courses View
+CREATE VIEW ActiveCoursesView AS  
+SELECT c.Id AS CourseID,  
+       c.title AS CourseTitle,  
+       c.Tag AS Category,  
+       p.FullName AS InstructorName,  
+       COUNT(pc.personid) AS TotalEnrollments  
+FROM course c  
+JOIN personCourse pc ON c.Id = pc.courseId  
+JOIN Person p ON p.Id IN (SELECT personid FROM personCourse WHERE courseId = c.Id)  
+WHERE p.userType = 'Instructor'  
+GROUP BY c.Id, c.title, c.Tag, p.FullName;
+
+
+
+-------2. Learner Progress View
+CREATE VIEW LearnerProgressView AS  
+SELECT p.Id AS LearnerID,  
+       p.FullName AS LearnerName,  
+       c.Id AS CourseID,  
+       c.title AS CourseTitle,  
+       COUNT(v.lessonId) AS CompletedLessons,  
+       (SELECT COUNT(*) FROM recordedLessons rl WHERE rl.courseId = c.Id) AS TotalLessons,  
+       (COUNT(v.lessonId) * 100.0) / NULLIF((SELECT COUNT(*) FROM recordedLessons WHERE courseId = c.Id), 0) AS CompletionPercentage  
+FROM Person p  
+JOIN personCourse pc ON p.Id = pc.personid  
+JOIN course c ON pc.courseId = c.Id  
+LEFT JOIN recordedLessons rl ON c.Id = rl.courseId  
+LEFT JOIN videos v ON rl.Id = v.lessonId  
+WHERE p.userType = 'Learners'  
+GROUP BY p.Id, p.FullName, c.Id, c.title;
+
+
+
+----------3. Revenue Summary View
+CREATE VIEW RevenueSummaryView AS  
+SELECT c.Id AS CourseID,  
+       c.title AS CourseTitle,  
+       p.FullName AS InstructorName,  
+       COUNT(pc.personid) AS TotalEnrollments,  
+       SUM(c.price * (1 - c.discount / 100)) AS TotalRevenue  
+FROM course c  
+JOIN personCourse pc ON c.Id = pc.courseId  
+JOIN Person p ON p.Id IN (SELECT personid FROM personCourse WHERE courseId = c.Id)  
+WHERE p.userType = 'Instructor'  
+GROUP BY c.Id, c.title, p.FullName;
+
+
+--------Stored Procedures
+-----1. Enroll Learner in a Course
+CREATE PROCEDURE EnrollLearner  
+    @LearnerId INT,  
+    @CourseId INT  
+AS  
+BEGIN  
+    
+    IF NOT EXISTS (SELECT 1 FROM Person WHERE Id = @LearnerId AND userType = 'Learners')  
+    BEGIN  
+        PRINT 'Error: Learner does not exist or is not active';  
+        RETURN;  
+    END  
+
+    
+    IF NOT EXISTS (SELECT 1 FROM course WHERE Id = @CourseId)  
+    BEGIN  
+        PRINT 'Error: Course does not exist';  
+        RETURN;  
+    END  
+
+ 
+    IF EXISTS (SELECT 1 FROM personCourse WHERE personid = @LearnerId AND courseId = @CourseId)  
+    BEGIN  
+        PRINT 'Error: Learner is already enrolled in this course';  
+        RETURN;  
+    END  
+
+    -- Enroll the learner  
+    INSERT INTO personCourse (personid, courseId)  
+    VALUES (@LearnerId, @CourseId);  
+
+    PRINT 'Learner enrolled successfully';  
+END;
+
+
+--------2. Add a New Course
+CREATE PROCEDURE AddNewCourse  
+    @InstructorId INT,  
+    @Title VARCHAR(50),  
+    @Description VARCHAR(50),  
+    @Tag VARCHAR(10),  
+    @Level VARCHAR(20),  
+    @Price INT,  
+    @Discount DECIMAL(5,2),  
+    @Duration VARCHAR(50),  
+    @Language VARCHAR(20),  
+    @PublishedDate DATE  
+AS  
+BEGIN  
+    IF NOT EXISTS (SELECT 1 FROM Person WHERE Id = @InstructorId AND userType = 'Instructor')  
+    BEGIN  
+        PRINT 'Error: Instructor does not exist';  
+        RETURN;  
+    END  
+
+   
+    INSERT INTO course (title, description, Tag, Level, price, discount, duration, language, publishedDate)  
+    VALUES (@Title, @Description, @Tag, @Level, @Price, @Discount, @Duration, @Language, @PublishedDate);  
+
+    PRINT 'Course added successfully';  
+END;
+
+
+---------3. Generate Revenue Report
+
+CREATE PROCEDURE GenerateRevenueReport  
+    @StartDate DATE,  
+    @EndDate DATE  
+AS  
+BEGIN  
+    SELECT c.Id AS CourseID,  
+           c.title AS CourseTitle,  
+           p.FullName AS InstructorName,  
+           COUNT(pc.personid) AS TotalEnrollments,  
+           SUM(c.price * (1 - c.discount / 100)) AS TotalRevenue  
+    FROM course c  
+    JOIN personCourse pc ON c.Id = pc.courseId  
+    JOIN Person p ON p.Id IN (SELECT personid FROM personCourse WHERE courseId = c.Id)  
+    WHERE p.userType = 'Instructor'  
+      AND c.publishedDate BETWEEN @StartDate AND @EndDate  
+    GROUP BY c.Id, c.title, p.FullName;  
+END;
+
+
+-------4. Manage Discounts
+CREATE PROCEDURE ManageDiscounts  
+    @CourseId INT,  
+    @NewDiscount DECIMAL(5,2)  
+AS  
+BEGIN  
+ 
+    IF NOT EXISTS (SELECT 1 FROM course WHERE Id = @CourseId)  
+    BEGIN  
+        PRINT 'Error: Course does not exist';  
+        RETURN;  
+    END  
+
+    UPDATE course  
+    SET discount = @NewDiscount  
+    WHERE Id = @CourseId;  
+
+    PRINT 'Discount updated successfully';  
+END;
+

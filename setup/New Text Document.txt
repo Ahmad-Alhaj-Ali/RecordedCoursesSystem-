@@ -1,0 +1,64 @@
+
+INSERT INTO Person (Id, FullName, email, [password], userType, profilePicture) VALUES
+(1, 'John Doe', 'john@example.com', NULL, 'admin', NULL),
+(2, 'Alice Smith', 'alice@example.com', NULL, 'Learners', NULL),
+(3, 'Bob Johnson', 'bob@example.com', NULL, 'Instructor', NULL),
+(4, 'Emma Brown', 'emma@example.com', NULL, 'user', NULL),
+(5, 'David Wilson', 'david@example.com', NULL, 'admin', NULL);
+
+
+UPDATE Person  
+SET [password] = 'DefaultPass123'  
+WHERE [password] IS NULL;
+
+
+
+INSERT INTO course (Id, title, [description], Tag, [Level], price, discount, duration, [language], publishedDate, coverImage) VALUES
+(1, 'Python Basics', 'Intro to Python', 'Python', 'Beginner', 100, 10.00, '4 weeks', 'English', '2024-01-15', NULL),
+(2, 'Web Development', 'HTML, CSS, JS', 'WebDev', 'Intermediate', 150, 15.00, '6 weeks', 'English', '2024-02-01', NULL),
+(3, 'Data Science', 'Learn ML & AI', 'AI', 'Advanced', 200, 20.00, '8 weeks', 'English', '2024-02-10', NULL),
+(4, 'Cybersecurity', 'Ethical Hacking', 'Security', 'Expert', 250, 25.00, '10 weeks', 'English', '2024-03-01', NULL),
+(5, 'Cloud Computing', 'AWS & Azure', 'Cloud', 'Intermediate', 180, 12.50, '7 weeks', 'English', '2024-03-10', NULL);
+
+
+
+
+INSERT INTO personCourse (personid, courseId) VALUES
+(1, 1),
+(2, 2),
+(3, 3),
+(4, 4),
+(5, 5);
+
+
+
+
+
+INSERT INTO recordedLessons (Id, title, courseId) VALUES
+(1, 'Intro to Python', 1),
+(2, 'CSS Basics', 2),
+(3, 'Machine Learning', 3),
+(4, 'Cybersecurity 101', 4),
+(5, 'AWS Fundamentals', 5);
+
+
+
+
+
+INSERT INTO videos (videofile, lessonId) VALUES
+('python_intro.mp4', 1),
+('css_basics.mp4', 2),
+('ml_intro.mp4', 3),
+('cyber_101.mp4', 4),
+('aws_fundamentals.mp4', 5);
+
+
+
+
+INSERT INTO Rate (rateAmount, [message], personid, courseId) VALUES
+('5', 'Great course!', 1, 1),
+('4', 'Very informative', 2, 2),
+('5', 'Excellent content', 3, 3),
+('3', 'Good but needs improvement', 4, 4),
+('5', 'Highly recommended!', 5, 5);
+

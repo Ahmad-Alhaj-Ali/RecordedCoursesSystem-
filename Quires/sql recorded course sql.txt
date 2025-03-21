@@ -1,0 +1,318 @@
+CREATE DATABASE [Recorded Courses System]
+
+CREATE TABLE Person 
+(Id int primary key,
+FullName varchar(50) unique ,
+email varchar(50) unique check(email like '_%@%.%'),
+[password] varchar(16) check([password]>8 and [password]<16 ),
+userType varchar(20) check( userType='admin' or userType='Learners'or userType='user' or userType='Instructor'),
+profilePicture VARBINARY(MAX))
+
+
+CREATE TABLE course
+(Id int primary key,
+title varchar(50) ,
+[description] varchar(50),
+Tag varchar(10) ,
+[Level] varchar(20) ,
+price int,
+discount DECIMAL(5, 2),
+duration varchar(50),
+[language] varchar(20),
+publishedDate date,
+coverImage VARBINARY(MAX),
+
+)
+
+CREATE TABLE personCourse
+(personid int,
+courseId int
+)
+
+
+CREATE TABLE recordedLessons 
+(Id int primary key,
+title varchar(20),
+courseId int
+)
+CREATE TABLE videos
+(videofile varchar(20),
+lessonId int)
+
+CREATE TABLE Rate
+(rateAmount varchar(20),
+[message] varchar(50),
+personid int,
+courseId int
+)
+
+
+
+
+INSERT INTO Person (Id, FullName, email, [password], userType, profilePicture) VALUES
+(1, 'John Doe', 'john@example.com', NULL, 'admin', NULL),
+(2, 'Alice Smith', 'alice@example.com', NULL, 'Learners', NULL),
+(3, 'Bob Johnson', 'bob@example.com', NULL, 'Instructor', NULL),
+(4, 'Emma Brown', 'emma@example.com', NULL, 'user', NULL),
+(5, 'David Wilson', 'david@example.com', NULL, 'admin', NULL);
+
+
+UPDATE Person  
+SET [password] = 'DefaultPass123'  
+WHERE [password] IS NULL;
+
+
+
+INSERT INTO course (Id, title, [description], Tag, [Level], price, discount, duration, [language], publishedDate, coverImage) VALUES
+(1, 'Python Basics', 'Intro to Python', 'Python', 'Beginner', 100, 10.00, '4 weeks', 'English', '2024-01-15', NULL),
+(2, 'Web Development', 'HTML, CSS, JS', 'WebDev', 'Intermediate', 150, 15.00, '6 weeks', 'English', '2024-02-01', NULL),
+(3, 'Data Science', 'Learn ML & AI', 'AI', 'Advanced', 200, 20.00, '8 weeks', 'English', '2024-02-10', NULL),
+(4, 'Cybersecurity', 'Ethical Hacking', 'Security', 'Expert', 250, 25.00, '10 weeks', 'English', '2024-03-01', NULL),
+(5, 'Cloud Computing', 'AWS & Azure', 'Cloud', 'Intermediate', 180, 12.50, '7 weeks', 'English', '2024-03-10', NULL);
+
+
+
+
+INSERT INTO personCourse (personid, courseId) VALUES
+(1, 1),
+(2, 2),
+(3, 3),
+(4, 4),
+(5, 5);
+
+
+
+
+
+INSERT INTO recordedLessons (Id, title, courseId) VALUES
+(1, 'Intro to Python', 1),
+(2, 'CSS Basics', 2),
+(3, 'Machine Learning', 3),
+(4, 'Cybersecurity 101', 4),
+(5, 'AWS Fundamentals', 5);
+
+
+
+
+
+INSERT INTO videos (videofile, lessonId) VALUES
+('python_intro.mp4', 1),
+('css_basics.mp4', 2),
+('ml_intro.mp4', 3),
+('cyber_101.mp4', 4),
+('aws_fundamentals.mp4', 5);
+
+
+
+
+INSERT INTO Rate (rateAmount, [message], personid, courseId) VALUES
+('5', 'Great course!', 1, 1),
+('4', 'Very informative', 2, 2),
+('5', 'Excellent content', 3, 3),
+('3', 'Good but needs improvement', 4, 4),
+('5', 'Highly recommended!', 5, 5);
+
+
+
+-----1. Retrieve Courses by Category
+SELECT c.title, c.price,  
+       COALESCE(AVG(CAST(r.rateAmount AS FLOAT)), 0) AS average_rating  
+FROM course c  
+LEFT JOIN Rate r ON c.Id = r.courseId  
+WHERE c.Tag = 'Python' 
+GROUP BY c.Id, c.title, c.price;
+
+------------2. Search Courses by Keyword
+DECLARE @keyword VARCHAR(50) = 'Python';  
+
+SELECT * FROM course  
+WHERE title LIKE '%' + @keyword + '%'  
+   OR description LIKE '%' + @keyword + '%';
+
+
+
+
+   ------3. Track Learner Progress
+
+   DECLARE @learnerId INT = 2;
+DECLARE @courseId INT = 1; 
+
+SELECT 
+    r.courseId,
+    COUNT(v.lessonId) AS completed_lessons,
+    (SELECT COUNT(*) FROM recordedLessons WHERE courseId = @courseId) - COUNT(v.lessonId) AS remaining_lessons
+FROM recordedLessons r  
+LEFT JOIN videos v ON r.Id = v.lessonId  
+WHERE r.courseId = @courseId  
+GROUP BY r.courseId;
+
+
+
+---------4. Top-Rated Courses
+
+SELECT c.title,  
+       COALESCE(AVG(CAST(r.rateAmount AS FLOAT)), 0) AS average_rating,  
+       COUNT(pc.personid) AS total_enrollments  
+FROM course c  
+LEFT JOIN Rate r ON c.Id = r.courseId  
+LEFT JOIN personCourse pc ON c.Id = pc.courseId  
+GROUP BY c.Id, c.title  
+ORDER BY average_rating DESC, total_enrollments DESC;
+
+
+
+
+-------view
+--------1. Active Courses View
+CREATE VIEW ActiveCoursesView AS  
+SELECT c.Id AS CourseID,  
+       c.title AS CourseTitle,  
+       c.Tag AS Category,  
+       p.FullName AS InstructorName,  
+       COUNT(pc.personid) AS TotalEnrollments  
+FROM course c  
+JOIN personCourse pc ON c.Id = pc.courseId  
+JOIN Person p ON p.Id IN (SELECT personid FROM personCourse WHERE courseId = c.Id)  
+WHERE p.userType = 'Instructor'  
+GROUP BY c.Id, c.title, c.Tag, p.FullName;
+
+
+
+-------2. Learner Progress View
+CREATE VIEW LearnerProgressView AS  
+SELECT p.Id AS LearnerID,  
+       p.FullName AS LearnerName,  
+       c.Id AS CourseID,  
+       c.title AS CourseTitle,  
+       COUNT(v.lessonId) AS CompletedLessons,  
+       (SELECT COUNT(*) FROM recordedLessons rl WHERE rl.courseId = c.Id) AS TotalLessons,  
+       (COUNT(v.lessonId) * 100.0) / NULLIF((SELECT COUNT(*) FROM recordedLessons WHERE courseId = c.Id), 0) AS CompletionPercentage  
+FROM Person p  
+JOIN personCourse pc ON p.Id = pc.personid  
+JOIN course c ON pc.courseId = c.Id  
+LEFT JOIN recordedLessons rl ON c.Id = rl.courseId  
+LEFT JOIN videos v ON rl.Id = v.lessonId  
+WHERE p.userType = 'Learners'  
+GROUP BY p.Id, p.FullName, c.Id, c.title;
+
+
+
+----------3. Revenue Summary View
+CREATE VIEW RevenueSummaryView AS  
+SELECT c.Id AS CourseID,  
+       c.title AS CourseTitle,  
+       p.FullName AS InstructorName,  
+       COUNT(pc.personid) AS TotalEnrollments,  
+       SUM(c.price * (1 - c.discount / 100)) AS TotalRevenue  
+FROM course c  
+JOIN personCourse pc ON c.Id = pc.courseId  
+JOIN Person p ON p.Id IN (SELECT personid FROM personCourse WHERE courseId = c.Id)  
+WHERE p.userType = 'Instructor'  
+GROUP BY c.Id, c.title, p.FullName;
+
+
+--------Stored Procedures
+-----1. Enroll Learner in a Course
+CREATE PROCEDURE EnrollLearner  
+    @LearnerId INT,  
+    @CourseId INT  
+AS  
+BEGIN  
+    
+    IF NOT EXISTS (SELECT 1 FROM Person WHERE Id = @LearnerId AND userType = 'Learners')  
+    BEGIN  
+        PRINT 'Error: Learner does not exist or is not active';  
+        RETURN;  
+    END  
+
+    
+    IF NOT EXISTS (SELECT 1 FROM course WHERE Id = @CourseId)  
+    BEGIN  
+        PRINT 'Error: Course does not exist';  
+        RETURN;  
+    END  
+
+ 
+    IF EXISTS (SELECT 1 FROM personCourse WHERE personid = @LearnerId AND courseId = @CourseId)  
+    BEGIN  
+        PRINT 'Error: Learner is already enrolled in this course';  
+        RETURN;  
+    END  
+
+    -- Enroll the learner  
+    INSERT INTO personCourse (personid, courseId)  
+    VALUES (@LearnerId, @CourseId);  
+
+    PRINT 'Learner enrolled successfully';  
+END;
+
+
+--------2. Add a New Course
+CREATE PROCEDURE AddNewCourse  
+    @InstructorId INT,  
+    @Title VARCHAR(50),  
+    @Description VARCHAR(50),  
+    @Tag VARCHAR(10),  
+    @Level VARCHAR(20),  
+    @Price INT,  
+    @Discount DECIMAL(5,2),  
+    @Duration VARCHAR(50),  
+    @Language VARCHAR(20),  
+    @PublishedDate DATE  
+AS  
+BEGIN  
+    IF NOT EXISTS (SELECT 1 FROM Person WHERE Id = @InstructorId AND userType = 'Instructor')  
+    BEGIN  
+        PRINT 'Error: Instructor does not exist';  
+        RETURN;  
+    END  
+
+   
+    INSERT INTO course (title, description, Tag, Level, price, discount, duration, language, publishedDate)  
+    VALUES (@Title, @Description, @Tag, @Level, @Price, @Discount, @Duration, @Language, @PublishedDate);  
+
+    PRINT 'Course added successfully';  
+END;
+
+
+---------3. Generate Revenue Report
+
+CREATE PROCEDURE GenerateRevenueReport  
+    @StartDate DATE,  
+    @EndDate DATE  
+AS  
+BEGIN  
+    SELECT c.Id AS CourseID,  
+           c.title AS CourseTitle,  
+           p.FullName AS InstructorName,  
+           COUNT(pc.personid) AS TotalEnrollments,  
+           SUM(c.price * (1 - c.discount / 100)) AS TotalRevenue  
+    FROM course c  
+    JOIN personCourse pc ON c.Id = pc.courseId  
+    JOIN Person p ON p.Id IN (SELECT personid FROM personCourse WHERE courseId = c.Id)  
+    WHERE p.userType = 'Instructor'  
+      AND c.publishedDate BETWEEN @StartDate AND @EndDate  
+    GROUP BY c.Id, c.title, p.FullName;  
+END;
+
+
+-------4. Manage Discounts
+CREATE PROCEDURE ManageDiscounts  
+    @CourseId INT,  
+    @NewDiscount DECIMAL(5,2)  
+AS  
+BEGIN  
+ 
+    IF NOT EXISTS (SELECT 1 FROM course WHERE Id = @CourseId)  
+    BEGIN  
+        PRINT 'Error: Course does not exist';  
+        RETURN;  
+    END  
+
+    UPDATE course  
+    SET discount = @NewDiscount  
+    WHERE Id = @CourseId;  
+
+    PRINT 'Discount updated successfully';  
+END;
+
